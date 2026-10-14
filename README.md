@@ -53,10 +53,11 @@ npm run ios        # 直接在 iOS 模拟器打开（需要 macOS）
 npm run web        # 浏览器预览
 ```
 
-类型检查：
+类型检查与 lint：
 
 ```bash
 npx tsc --noEmit
+npm run lint       # 即 npx expo lint（eslint-config-expo）
 ```
 
 ## 后续可做
