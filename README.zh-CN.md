@@ -371,6 +371,7 @@ Projects-app-mvp/
 | Node.js | `^20.19.4 \|\| ^22.13.0 \|\| ^24.3.0 \|\| >= 25.0.0`——`react-native@0.86.0` 在 `package-lock.json` 里声明的 `engines` 范围 |
 | npm | 随 Node 提供；仓库提交了 `package-lock.json`（lockfile v3） |
 | Expo Go（SDK 57）或模拟器/仿真器 | 推荐路径；项目没有 `expo-dev-client`，也没有原生目录 |
+| 现代浏览器 | 仅 Web 目标需要。`react-dom`、`react-native-web`、`@expo/metro-runtime` 已在依赖里，`npm run web` 不需要额外安装 |
 | 网络 | 卡片与头图都是 Wikimedia Commons 的远程地址 |
 
 ### 安装与运行
@@ -387,11 +388,12 @@ npx expo start
 ```bash
 npm run android    # expo start --android
 npm run ios        # expo start --ios
-npm run web        # expo start --web —— 见下方说明
+npm run web        # expo start --web —— 在浏览器里打开
 ```
 
-`npm run web` 会提示安装 `react-native-web`，而它**不在** `package.json` 里（`react-dom` 在）。在补上之前，
-请把 Web 目标视为未验证。
+Web 目标开箱即用：`react-dom`、`react-native-web`、`@expo/metro-runtime` 都已写进 `package.json`，
+`npm run web` 启动开发服务器时不会再提示安装任何东西。`npx expo export --platform web` 会把同一个应用
+构建到 `dist/`（已 gitignore），是确认 Web 包仍能编译的最快方式。
 
 原生构建没有预置步骤：仓库不提交 `ios/`、`android/` 目录（它们在 gitignore 里），走 Expo 的托管工作流 /
 持续原生生成。确实需要独立安装包时，本地执行 `npx expo run:android` 或 `npx expo run:ios`，或者自行配置
@@ -400,11 +402,12 @@ EAS——这两者在本仓库都未配置。
 ### 验证改动
 
 ```bash
-npx tsc --noEmit     # 类型检查（strict）
-npx eslint .         # 与 `npm run lint` 同一套配置
+npx tsc --noEmit                  # 类型检查（strict）
+npx eslint .                      # 与 `npm run lint` 同一套配置
+npx expo export --platform web    # Web 目标仍能打包
 ```
 
-这两条命令就是项目声明的验证门槛（`CLAUDE.md`）。仓库里没有 test 脚本，也没有安装任何测试框架。
+以上是项目声明的验证门槛（`CLAUDE.md`）加一次 Web 构建。仓库里没有 test 脚本，也没有安装任何测试框架。
 
 ---
 
@@ -415,9 +418,10 @@ npx eslint .         # 与 `npm run lint` 同一套配置
 | `npm start` | `expo start`——开发服务器 + 二维码 |
 | `npm run android` | `expo start --android`——在已连接的 Android 仿真器/真机上打开 |
 | `npm run ios` | `expo start --ios`——在 iOS 模拟器打开（macOS） |
-| `npm run web` | `expo start --web`——需要 `react-native-web`，未安装 |
+| `npm run web` | `expo start --web`——在浏览器里打开（Web 依赖已安装） |
 | `npm run lint` | `expo lint`（配置见 `eslint.config.js`） |
 | `npx tsc --noEmit` | TypeScript 检查，strict 模式（`tsconfig.json`） |
+| `npx expo export --platform web` | 打包生产版 Web 包到 `dist/`，用来证明 Web 目标可构建 |
 | `npx expo start -c` | 清 Metro 缓存后再启动 |
 
 ---
@@ -449,7 +453,6 @@ Expo SDK 由 `package.json` 锁在 `~57.0.6`；React Native `0.86.0`，React `19
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
-| 报错 `It looks like you're trying to use web support but don't have the required dependencies installed` | `react-native-web` 不是依赖 | `npx expo install react-native-web`，或继续用原生目标 |
 | 提示 `Project is incompatible with this version of Expo Go` | 设备上的 Expo Go 不支持当前 SDK | 换支持 SDK 57 的 Expo Go，或改用模拟器 |
 | 卡片和头图显示空白 | 六张图都是远程 Wikimedia 地址，没有本地兜底 | 检查网络；布局本身仍会渲染 |
 | 重载应用后收藏全部消失 | 只在内存里，没有接 AsyncStorage | 预期行为，见[设计取舍](#设计取舍与已知限制) |
@@ -475,8 +478,8 @@ Expo SDK 由 `package.json` 锁在 `~57.0.6`；React Native `0.86.0`，React `19
 - **搜索只做子串匹配。** 没有模糊匹配、没有拼音、不搜简介和分类。分类是独立的显式筛选，因此两者叠加时行为可预期。
 - **只有一个全局 Stack，没有 Tab。** 三个页面、原生头部、默认返回手势；没有 TabBar、抽屉、Modal 或嵌套导航器。
 - **界面文案是硬编码中文。** 没有 i18n 库、没有语言切换。`englishName` 是数据，不是翻译。
-- **存在未使用的依赖。** `expo-constants`、`expo-linking`、`expo-status-bar` 在 `package.json` 里声明了，
-  但全仓库没有任何 import，也没有渲染 `StatusBar` 组件——它们是 Expo 模板的遗留。现在删掉是安全的。
+- **一套代码、三个平台。** 同一批页面通过 `react-native-web` 跑在 iOS、Android 和 Web 上；Web 目标没有
+  路由层的特殊分支，`app.json` 里为它保留的只有 favicon。
 - **没有测试，没有 CI。** 没有测试框架、没有 `test` 脚本、没有工作流文件。验证靠 `tsc --noEmit` 加 `eslint`。
   过滤逻辑和 reducer 都是纯函数，将来要补测试并不难。
 - **只有浅色主题。** `userInterfaceStyle: "light"`，颜色全写在 `StyleSheet` 里的十六进制字面量

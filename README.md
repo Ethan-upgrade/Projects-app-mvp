@@ -386,6 +386,7 @@ Not present, and therefore not documented: `ios/`, `android/`, `eas.json`, `src/
 | Node.js | `^20.19.4 \|\| ^22.13.0 \|\| ^24.3.0 \|\| >= 25.0.0` — the `engines` range declared by `react-native@0.86.0` in `package-lock.json` |
 | npm | Ships with Node; `package-lock.json` (lockfile v3) is committed |
 | Expo Go (SDK 57) or a simulator/emulator | Recommended path; the project has no `expo-dev-client` and no native folders |
+| A modern browser | Only for the web target. `react-dom`, `react-native-web` and `@expo/metro-runtime` are already declared, so `npm run web` needs no extra install |
 | Network access | Card and hero images are remote Wikimedia Commons URLs |
 
 ### Install and run
@@ -403,11 +404,13 @@ for an iOS simulator. Script shortcuts:
 ```bash
 npm run android    # expo start --android
 npm run ios        # expo start --ios
-npm run web        # expo start --web — see the note below
+npm run web        # expo start --web — opens the app in a browser
 ```
 
-`npm run web` will prompt to install `react-native-web`, which is **not** in
-`package.json` (`react-dom` is). Treat the web target as unverified unless you add it.
+The web target works out of the box: `react-dom`, `react-native-web` and `@expo/metro-runtime`
+are declared in `package.json`, so `npm run web` starts the dev server without prompting to
+install anything. `npx expo export --platform web` builds the same app to `dist/` (git-ignored)
+and is the quickest way to confirm the web bundle still compiles.
 
 There is no build step for native code: the repo commits no `ios/` or `android/` directories
 (they are git-ignored) and relies on Expo's managed workflow / continuous native generation.
@@ -417,12 +420,13 @@ set up EAS — neither is configured in this repository.
 ### Verify a change
 
 ```bash
-npx tsc --noEmit     # type-check (strict)
-npx eslint .         # same config as `npm run lint`
+npx tsc --noEmit                  # type-check (strict)
+npx eslint .                      # same config as `npm run lint`
+npx expo export --platform web    # web target still bundles
 ```
 
-These two commands are the project's stated verification gate (`CLAUDE.md`). There is no test
-script and no test runner installed.
+These are the project's stated verification gate (`CLAUDE.md`) plus a web build. There is no
+test script and no test runner installed.
 
 ---
 
@@ -433,9 +437,10 @@ script and no test runner installed.
 | `npm start` | `expo start` — dev server + QR code |
 | `npm run android` | `expo start --android` — open on a connected Android emulator/device |
 | `npm run ios` | `expo start --ios` — open on the iOS simulator (macOS) |
-| `npm run web` | `expo start --web` — needs `react-native-web`, not installed |
+| `npm run web` | `expo start --web` — open in a browser (web deps are installed) |
 | `npm run lint` | `expo lint` (flat config in `eslint.config.js`) |
 | `npx tsc --noEmit` | TypeScript check, strict mode (`tsconfig.json`) |
+| `npx expo export --platform web` | Production web bundle into `dist/`; proves the web target builds |
 | `npx expo start -c` | Same as `npm start` with a cleared Metro cache |
 
 ---
@@ -469,7 +474,6 @@ dependency.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `CommandError: It looks like you're trying to use web support but don't have the required dependencies installed` | `react-native-web` is not a dependency | `npx expo install react-native-web`, or stay on a native target |
 | “Project is incompatible with this version of Expo Go” | Expo Go on the device has a different SDK | Install an Expo Go build that supports SDK 57, or use a simulator |
 | Cards and hero images are blank | The six images are remote Wikimedia URLs; no bundled fallback | Check connectivity; the layout still renders without images |
 | Bookmarks disappear after reloading the app | In-memory only — no AsyncStorage is wired up | Expected; see [Design decisions](#design-decisions--limitations) |
@@ -501,9 +505,9 @@ dependency.
   no tab bar, drawer, modal or nested navigator.
 - **UI copy is Chinese and hardcoded.** No i18n library, no locale switch. `englishName` is
   data, not translation.
-- **Unused dependencies.** `expo-constants`, `expo-linking` and `expo-status-bar` are declared
-  in `package.json` but never imported; no `StatusBar` component is rendered anywhere. They
-  are leftovers of the Expo template. Removing them is safe today.
+- **Three targets, one codebase.** The same screens run on iOS, Android and the web through
+  `react-native-web`; the web target has no router-specific overrides and `app.json` carries
+  only a favicon for it.
 - **No tests, no CI.** No test runner, no `test` script, no workflow file. Verification is
   `tsc --noEmit` plus `eslint`. Filtering and the reducer are pure and easy to test if that
   changes.
